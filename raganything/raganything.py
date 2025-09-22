@@ -8,39 +8,35 @@ This script integrates:
 """
 
 import os
-from typing import Dict, Any, Optional, Callable
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable, Dict, Optional
 
 # Add project root directory to Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from dotenv import load_dotenv
 from lightrag import LightRAG
 from lightrag.utils import logger
-from dotenv import load_dotenv
 
 # Load environment variables from .env file
 # The OS environment variables take precedence over the .env file
 load_dotenv(dotenv_path=".env", override=False)
 
+from raganything.batch import BatchMixin
 # Import configuration and modules
 from raganything.config import RAGAnythingConfig
-from raganything.query import QueryMixin
-from raganything.processor import ProcessorMixin
-from raganything.batch import BatchMixin
-from raganything.utils import get_processor_supports
-from raganything.parser import MineruParser, DoclingParser
-
 # Import specialized processors
-from raganything.modalprocessors import (
-    ImageModalProcessor,
-    TableModalProcessor,
-    EquationModalProcessor,
-    GenericModalProcessor,
-    ContextExtractor,
-    ContextConfig,
-)
+from raganything.modalprocessors import (ContextConfig, ContextExtractor,
+                                         EquationModalProcessor,
+                                         GenericModalProcessor,
+                                         ImageModalProcessor,
+                                         TableModalProcessor)
+from raganything.parser import DoclingParser, MineruParser
+from raganything.processor import ProcessorMixin
+from raganything.query import QueryMixin
+from raganything.utils import get_processor_supports
 
 
 @dataclass
@@ -399,15 +395,15 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
             "mineru_installed": MineruParser.check_installation(MineruParser()),
             "config": self.get_config_info(),
             "models": {
-                "llm_model": "External function"
-                if self.llm_model_func
-                else "Not provided",
-                "vision_model": "External function"
-                if self.vision_model_func
-                else "Not provided",
-                "embedding_model": "External function"
-                if self.embedding_func
-                else "Not provided",
+                "llm_model": (
+                    "External function" if self.llm_model_func else "Not provided"
+                ),
+                "vision_model": (
+                    "External function" if self.vision_model_func else "Not provided"
+                ),
+                "embedding_model": (
+                    "External function" if self.embedding_func else "Not provided"
+                ),
             },
         }
 

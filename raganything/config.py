@@ -6,6 +6,7 @@ Contains configuration dataclasses with environment variable support
 
 from dataclasses import dataclass, field
 from typing import List
+
 from lightrag.utils import get_env_value
 
 

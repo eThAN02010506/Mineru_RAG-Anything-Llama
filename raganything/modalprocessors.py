@@ -9,22 +9,19 @@ Includes:
 - GenericModalProcessor: Processor for other modal content
 """
 
-import re
-import json
-import time
 import base64
-from typing import Dict, Any, Tuple, List
+import json
+import re
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple
 
-from lightrag.utils import (
-    logger,
-    compute_mdhash_id,
-)
+from lightrag.kg.shared_storage import (get_namespace_data,
+                                        get_pipeline_status_lock)
 from lightrag.lightrag import LightRAG
-from dataclasses import asdict
-from lightrag.kg.shared_storage import get_namespace_data, get_pipeline_status_lock
 from lightrag.operate import extract_entities, merge_nodes_and_edges
+from lightrag.utils import compute_mdhash_id, logger
 
 # Import prompt templates
 from raganything.prompt import PROMPTS
@@ -836,18 +833,22 @@ class ImageModalProcessor(BaseModalProcessor):
                     "vision_prompt_with_context", PROMPTS["vision_prompt"]
                 ).format(
                     context=context,
-                    entity_name=entity_name
-                    if entity_name
-                    else "unique descriptive name for this image",
+                    entity_name=(
+                        entity_name
+                        if entity_name
+                        else "unique descriptive name for this image"
+                    ),
                     image_path=image_path,
                     captions=captions if captions else "None",
                     footnotes=footnotes if footnotes else "None",
                 )
             else:
                 vision_prompt = PROMPTS["vision_prompt"].format(
-                    entity_name=entity_name
-                    if entity_name
-                    else "unique descriptive name for this image",
+                    entity_name=(
+                        entity_name
+                        if entity_name
+                        else "unique descriptive name for this image"
+                    ),
                     image_path=image_path,
                     captions=captions if captions else "None",
                     footnotes=footnotes if footnotes else "None",
@@ -894,9 +895,11 @@ class ImageModalProcessor(BaseModalProcessor):
             logger.error(f"Error processing image content: {e}")
             # Fallback processing
             fallback_entity = {
-                "entity_name": entity_name
-                if entity_name
-                else f"image_{compute_mdhash_id(str(modal_content))}",
+                "entity_name": (
+                    entity_name
+                    if entity_name
+                    else f"image_{compute_mdhash_id(str(modal_content))}"
+                ),
                 "entity_type": "image",
                 "summary": f"Image content: {str(modal_content)[:100]}",
             }
@@ -932,9 +935,11 @@ class ImageModalProcessor(BaseModalProcessor):
             logger.error(f"Error parsing image analysis response: {e}")
             logger.debug(f"Raw response: {response}")
             fallback_entity = {
-                "entity_name": entity_name
-                if entity_name
-                else f"image_{compute_mdhash_id(response)}",
+                "entity_name": (
+                    entity_name
+                    if entity_name
+                    else f"image_{compute_mdhash_id(response)}"
+                ),
                 "entity_type": "image",
                 "summary": response[:100] + "..." if len(response) > 100 else response,
             }
@@ -983,9 +988,9 @@ class TableModalProcessor(BaseModalProcessor):
                 "table_prompt_with_context", PROMPTS["table_prompt"]
             ).format(
                 context=context,
-                entity_name=entity_name
-                if entity_name
-                else "descriptive name for this table",
+                entity_name=(
+                    entity_name if entity_name else "descriptive name for this table"
+                ),
                 table_img_path=table_img_path,
                 table_caption=table_caption if table_caption else "None",
                 table_body=table_body,
@@ -993,9 +998,9 @@ class TableModalProcessor(BaseModalProcessor):
             )
         else:
             table_prompt = PROMPTS["table_prompt"].format(
-                entity_name=entity_name
-                if entity_name
-                else "descriptive name for this table",
+                entity_name=(
+                    entity_name if entity_name else "descriptive name for this table"
+                ),
                 table_img_path=table_img_path,
                 table_caption=table_caption if table_caption else "None",
                 table_body=table_body,
@@ -1057,9 +1062,11 @@ class TableModalProcessor(BaseModalProcessor):
             logger.error(f"Error parsing table analysis response: {e}")
             logger.debug(f"Raw response: {response}")
             fallback_entity = {
-                "entity_name": entity_name
-                if entity_name
-                else f"table_{compute_mdhash_id(response)}",
+                "entity_name": (
+                    entity_name
+                    if entity_name
+                    else f"table_{compute_mdhash_id(response)}"
+                ),
                 "entity_type": "table",
                 "summary": response[:100] + "..." if len(response) > 100 else response,
             }
@@ -1108,17 +1115,17 @@ class EquationModalProcessor(BaseModalProcessor):
                 context=context,
                 equation_text=equation_text,
                 equation_format=equation_format,
-                entity_name=entity_name
-                if entity_name
-                else "descriptive name for this equation",
+                entity_name=(
+                    entity_name if entity_name else "descriptive name for this equation"
+                ),
             )
         else:
             equation_prompt = PROMPTS["equation_prompt"].format(
                 equation_text=equation_text,
                 equation_format=equation_format,
-                entity_name=entity_name
-                if entity_name
-                else "descriptive name for this equation",
+                entity_name=(
+                    entity_name if entity_name else "descriptive name for this equation"
+                ),
             )
 
         response = await self.modal_caption_func(
@@ -1172,9 +1179,11 @@ class EquationModalProcessor(BaseModalProcessor):
             logger.error(f"Error parsing equation analysis response: {e}")
             logger.debug(f"Raw response: {response}")
             fallback_entity = {
-                "entity_name": entity_name
-                if entity_name
-                else f"equation_{compute_mdhash_id(response)}",
+                "entity_name": (
+                    entity_name
+                    if entity_name
+                    else f"equation_{compute_mdhash_id(response)}"
+                ),
                 "entity_type": "equation",
                 "summary": response[:100] + "..." if len(response) > 100 else response,
             }
@@ -1210,17 +1219,21 @@ class GenericModalProcessor(BaseModalProcessor):
             ).format(
                 context=context,
                 content_type=content_type,
-                entity_name=entity_name
-                if entity_name
-                else f"descriptive name for this {content_type}",
+                entity_name=(
+                    entity_name
+                    if entity_name
+                    else f"descriptive name for this {content_type}"
+                ),
                 content=str(modal_content),
             )
         else:
             generic_prompt = PROMPTS["generic_prompt"].format(
                 content_type=content_type,
-                entity_name=entity_name
-                if entity_name
-                else f"descriptive name for this {content_type}",
+                entity_name=(
+                    entity_name
+                    if entity_name
+                    else f"descriptive name for this {content_type}"
+                ),
                 content=str(modal_content),
             )
 
@@ -1277,9 +1290,11 @@ class GenericModalProcessor(BaseModalProcessor):
             logger.error(f"Error parsing {content_type} analysis response: {e}")
             logger.debug(f"Raw response: {response}")
             fallback_entity = {
-                "entity_name": entity_name
-                if entity_name
-                else f"{content_type}_{compute_mdhash_id(response)}",
+                "entity_name": (
+                    entity_name
+                    if entity_name
+                    else f"{content_type}_{compute_mdhash_id(response)}"
+                ),
                 "entity_type": content_type,
                 "summary": response[:100] + "..." if len(response) > 100 else response,
             }

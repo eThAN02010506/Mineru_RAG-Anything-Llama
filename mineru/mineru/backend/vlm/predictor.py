@@ -4,16 +4,11 @@ import time
 
 from loguru import logger
 
-from .base_predictor import (
-    DEFAULT_MAX_NEW_TOKENS,
-    DEFAULT_NO_REPEAT_NGRAM_SIZE,
-    DEFAULT_PRESENCE_PENALTY,
-    DEFAULT_REPETITION_PENALTY,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_TOP_K,
-    DEFAULT_TOP_P,
-    BasePredictor,
-)
+from .base_predictor import (DEFAULT_MAX_NEW_TOKENS,
+                             DEFAULT_NO_REPEAT_NGRAM_SIZE,
+                             DEFAULT_PRESENCE_PENALTY,
+                             DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE,
+                             DEFAULT_TOP_K, DEFAULT_TOP_P, BasePredictor)
 from .sglang_client_predictor import SglangClientPredictor
 
 hf_loaded = False
@@ -22,7 +17,9 @@ try:
 
     hf_loaded = True
 except ImportError as e:
-    logger.warning("hf is not installed. If you are not using transformers, you can ignore this warning.")
+    logger.warning(
+        "hf is not installed. If you are not using transformers, you can ignore this warning."
+    )
 
 engine_loaded = False
 try:
@@ -32,7 +29,9 @@ try:
 
     engine_loaded = True
 except Exception as e:
-    logger.warning("sglang is not installed. If you are not using sglang, you can ignore this warning.")
+    logger.warning(
+        "sglang is not installed. If you are not using sglang, you can ignore this warning."
+    )
 
 
 def get_predictor(
@@ -104,7 +103,9 @@ def get_predictor(
             http_timeout=http_timeout,
         )
     else:
-        raise ValueError(f"Unsupported backend: {backend}. Supports: transformers, sglang-engine, sglang-client.")
+        raise ValueError(
+            f"Unsupported backend: {backend}. Supports: transformers, sglang-engine, sglang-client."
+        )
 
     elapsed = round(time.time() - start_time, 2)
     logger.info(f"get_predictor cost: {elapsed}s")

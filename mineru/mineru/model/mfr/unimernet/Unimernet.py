@@ -21,8 +21,11 @@ class MathDataset(Dataset):
 class UnimernetModel(object):
     def __init__(self, weight_dir, _device_="cpu"):
         from .unimernet_hf import UnimernetModel
+
         if _device_.startswith("mps") or _device_.startswith("npu"):
-            self.model = UnimernetModel.from_pretrained(weight_dir, attn_implementation="eager")
+            self.model = UnimernetModel.from_pretrained(
+                weight_dir, attn_implementation="eager"
+            )
         else:
             self.model = UnimernetModel.from_pretrained(weight_dir)
         self.device = _device_
@@ -61,7 +64,9 @@ class UnimernetModel(object):
             res["latex"] = latex
         return formula_list
 
-    def batch_predict(self, images_mfd_res: list, images: list, batch_size: int = 64) -> list:
+    def batch_predict(
+        self, images_mfd_res: list, images: list, batch_size: int = 64
+    ) -> list:
         images_formula_list = []
         mf_image_list = []
         backfill_list = []
@@ -73,9 +78,9 @@ class UnimernetModel(object):
             pil_img = images[image_index]
             formula_list = []
 
-            for idx, (xyxy, conf, cla) in enumerate(zip(
-                    mfd_res.boxes.xyxy, mfd_res.boxes.conf, mfd_res.boxes.cls
-            )):
+            for idx, (xyxy, conf, cla) in enumerate(
+                zip(mfd_res.boxes.xyxy, mfd_res.boxes.conf, mfd_res.boxes.cls)
+            ):
                 xmin, ymin, xmax, ymax = [int(p.item()) for p in xyxy]
                 new_item = {
                     "category_id": 13 + int(cla.item()),
@@ -100,13 +105,19 @@ class UnimernetModel(object):
         sorted_images = [x[2] for x in image_info]
 
         # Create mapping for results
-        index_mapping = {new_idx: old_idx for new_idx, old_idx in enumerate(sorted_indices)}
+        index_mapping = {
+            new_idx: old_idx for new_idx, old_idx in enumerate(sorted_indices)
+        }
 
         # Create dataset with sorted images
         dataset = MathDataset(sorted_images, transform=self.model.transform)
 
         # 如果batch_size > len(sorted_images)，则设置为不超过len(sorted_images)的2的幂
-        batch_size = min(batch_size, max(1, 2 ** (len(sorted_images).bit_length() - 1))) if sorted_images else 1
+        batch_size = (
+            min(batch_size, max(1, 2 ** (len(sorted_images).bit_length() - 1)))
+            if sorted_images
+            else 1
+        )
 
         dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=0)
 
@@ -119,11 +130,15 @@ class UnimernetModel(object):
                 mf_img = mf_img.to(dtype=self.model.dtype)
                 mf_img = mf_img.to(self.device)
                 with torch.no_grad():
-                    output = self.model.generate({"image": mf_img}, batch_size=batch_size)
+                    output = self.model.generate(
+                        {"image": mf_img}, batch_size=batch_size
+                    )
                 mfr_res.extend(output["fixed_str"])
 
                 # 更新进度条，每次增加batch_size，但要注意最后一个batch可能不足batch_size
-                current_batch_size = min(batch_size, len(sorted_images) - index * batch_size)
+                current_batch_size = min(
+                    batch_size, len(sorted_images) - index * batch_size
+                )
                 pbar.update(current_batch_size)
 
         # Restore original order

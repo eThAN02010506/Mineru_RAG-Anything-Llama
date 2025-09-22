@@ -1,21 +1,20 @@
-
 #!/usr/bin/env python3
 """
 Web\u754c\u9762for RAG-Anything\u7cfb\u7edf
 \u63d0\u4f9b\u7b80\u5355\u7684\u7528\u6237\u754c\u9762\u6765\u67e5\u8be2\u6587\u6863\u548c\u67e5\u770b\u56de\u7b54
 """
-import os
-import sys
-import json
-import subprocess
 import argparse
+import json
+import os
 import re
-from pathlib import Path
-import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import urllib.parse
+import subprocess
+import sys
 import threading
 import time
+import urllib.parse
+import webbrowser
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 # HTML\u6a21\u677f
 HTML_TEMPLATE = """
@@ -440,185 +439,191 @@ HTML_TEMPLATE = """
 </html>
 """
 
+
 class RAGServer(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/':
+        if self.path == "/":
             self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
-            self.wfile.write(HTML_TEMPLATE.encode('utf-8'))
-        elif self.path == '/files':
+            self.wfile.write(HTML_TEMPLATE.encode("utf-8"))
+        elif self.path == "/files":
             self.send_response(200)
-            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header("Content-type", "application/json; charset=utf-8")
             self.end_headers()
-            
+
             # \u83b7\u53d6data\u76ee\u5f55\u4e2d\u7684PDF\u6587\u4ef6
-            data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+            data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
             pdf_files = []
             chunks_exists = False
-            
+
             if os.path.exists(data_dir):
-                pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith('.pdf')]
-                chunks_path = os.path.join(data_dir, 'chunks.jsonl')
+                pdf_files = [
+                    f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")
+                ]
+                chunks_path = os.path.join(data_dir, "chunks.jsonl")
                 chunks_exists = os.path.exists(chunks_path)
-            
-            response = {
-                'files': pdf_files,
-                'chunks_exists': chunks_exists
-            }
-            
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+
+            response = {"files": pdf_files, "chunks_exists": chunks_exists}
+
+            self.wfile.write(json.dumps(response).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
-            self.wfile.write(b'Not Found')
-    
+            self.wfile.write(b"Not Found")
+
     def do_POST(self):
-        if self.path == '/ask':
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length).decode('utf-8')
+        if self.path == "/ask":
+            content_length = int(self.headers["Content-Length"])
+            post_data = self.rfile.read(content_length).decode("utf-8")
             params = urllib.parse.parse_qs(post_data)
-            
-            question = params.get('question', [''])[0]
-            
+
+            question = params.get("question", [""])[0]
+
             if question:
                 # \u8c03\u7528RAG-Anything\u7cfb\u7edf
                 answer, sources = self.query_rag_system(question)
-                
+
                 self.send_response(200)
-                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                
-                response = {
-                    'answer': answer,
-                    'sources': sources
-                }
-                
-                self.wfile.write(json.dumps(response).encode('utf-8'))
+
+                response = {"answer": answer, "sources": sources}
+
+                self.wfile.write(json.dumps(response).encode("utf-8"))
             else:
                 self.send_response(400)
-                self.send_header('Content-type', 'application/json; charset=utf-8')
+                self.send_header("Content-type", "application/json; charset=utf-8")
                 self.end_headers()
-                
-                response = {
-                    'error': '\u6ca1\u6709\u63d0\u4f9b\u95ee\u9898'
-                }
-                
-                self.wfile.write(json.dumps(response).encode('utf-8'))
-        elif self.path == '/process':
+
+                response = {"error": "\u6ca1\u6709\u63d0\u4f9b\u95ee\u9898"}
+
+                self.wfile.write(json.dumps(response).encode("utf-8"))
+        elif self.path == "/process":
             # \u5904\u7406\u6587\u6863
             success, error_msg = self.process_documents()
-            
+
             self.send_response(200)
-            self.send_header('Content-type', 'application/json; charset=utf-8')
+            self.send_header("Content-type", "application/json; charset=utf-8")
             self.end_headers()
-            
-            response = {
-                'success': success,
-                'error': error_msg
-            }
-            
-            self.wfile.write(json.dumps(response).encode('utf-8'))
+
+            response = {"success": success, "error": error_msg}
+
+            self.wfile.write(json.dumps(response).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
-            self.wfile.write(b'Not Found')
-    
+            self.wfile.write(b"Not Found")
+
     def query_rag_system(self, question):
         """\u8c03\u7528RAG-Anything\u7cfb\u7edf\u5e76\u8fd4\u56de\u56de\u7b54"""
         try:
             # \u83b7\u53d6\u5f53\u524d\u811a\u672c\u76ee\u5f55
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            data_dir = os.path.join(script_dir, 'data')
-            
+            data_dir = os.path.join(script_dir, "data")
+
             # \u68c0\u67e5\u662f\u5426\u5df2\u7ecf\u5904\u7406\u8fc7\u6587\u6863
-            chunks_path = os.path.join(data_dir, 'chunks.jsonl')
+            chunks_path = os.path.join(data_dir, "chunks.jsonl")
             if not os.path.exists(chunks_path):
-                print("\u6587\u6863\u5c1a\u672a\u5904\u7406\uff0c\u5148\u5904\u7406\u6587\u6863...")
+                print(
+                    "\u6587\u6863\u5c1a\u672a\u5904\u7406\uff0c\u5148\u5904\u7406\u6587\u6863..."
+                )
                 success, error_msg = self.process_documents()
                 if not success:
                     return f"\u5904\u7406\u6587\u6863\u5931\u8d25: {error_msg}", []
-            
+
             # \u8c03\u7528run_rag.py
-            cmd = [sys.executable, 'run_rag.py', data_dir, question]
+            cmd = [sys.executable, "run_rag.py", data_dir, question]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
+
             if result.returncode != 0:
                 print(f"Error running RAG system: {result.stderr}")
-                return f"\u5904\u7406\u95ee\u9898\u65f6\u51fa\u9519: {result.stderr}", []
-            
+                return (
+                    f"\u5904\u7406\u95ee\u9898\u65f6\u51fa\u9519: {result.stderr}",
+                    [],
+                )
+
             # \u89e3\u6790\u8f93\u51fa
             output = result.stdout
-            
+
             # \u63d0\u53d6\u56de\u7b54\u548c\u6765\u6e90
             answer = ""
             sources = []
-            
+
             # \u5c1d\u8bd5\u4ece\u8f93\u51fa\u4e2d\u63d0\u53d6\u56de\u7b54
-            answer_match = re.search(r'\u56de\u7b54:(.*?)(?:\u56de\u7b54\u57fa\u4e8e|$)', output, re.DOTALL)
+            answer_match = re.search(
+                r"\u56de\u7b54:(.*?)(?:\u56de\u7b54\u57fa\u4e8e|$)", output, re.DOTALL
+            )
             if answer_match:
                 answer = answer_match.group(1).strip()
             else:
                 answer = output.strip()
-            
+
             # \u5c1d\u8bd5\u4ece\u8f93\u51fa\u4e2d\u63d0\u53d6\u6765\u6e90\u4fe1\u606f
-            source_match = re.search(r'\u56de\u7b54\u57fa\u4e8e\s+(\d+)\s+\u4e2a\u6587\u6863\u7247\u6bb5', output)
+            source_match = re.search(
+                r"\u56de\u7b54\u57fa\u4e8e\s+(\d+)\s+\u4e2a\u6587\u6863\u7247\u6bb5",
+                output,
+            )
             if source_match:
                 num_sources = int(source_match.group(1))
-                sources = [f"\u6587\u6863\u7247\u6bb5 {i+1}" for i in range(num_sources)]
-            
+                sources = [
+                    f"\u6587\u6863\u7247\u6bb5 {i+1}" for i in range(num_sources)
+                ]
+
             return answer, sources
-        
+
         except Exception as e:
             print(f"Error: {str(e)}")
             return f"\u5904\u7406\u95ee\u9898\u65f6\u51fa\u9519: {str(e)}", []
-    
+
     def process_documents(self):
         """\u5904\u7406\u6587\u6863"""
         try:
             # \u83b7\u53d6\u5f53\u524d\u811a\u672c\u76ee\u5f55
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            data_dir = os.path.join(script_dir, 'data')
-            
+            data_dir = os.path.join(script_dir, "data")
+
             # \u68c0\u67e5\u662f\u5426\u6709PDF\u6587\u4ef6
-            pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith('.pdf')]
+            pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")]
             if not pdf_files:
                 return False, "data\u76ee\u5f55\u4e2d\u6ca1\u6709PDF\u6587\u4ef6"
-            
+
             # \u5220\u9664\u73b0\u6709\u7684\u5904\u7406\u7ed3\u679c
-            chunks_path = os.path.join(data_dir, 'chunks.jsonl')
+            chunks_path = os.path.join(data_dir, "chunks.jsonl")
             if os.path.exists(chunks_path):
                 os.remove(chunks_path)
-            
-            faiss_path = os.path.join(data_dir, 'faiss_index.index')
+
+            faiss_path = os.path.join(data_dir, "faiss_index.index")
             if os.path.exists(faiss_path):
                 os.remove(faiss_path)
-            
-            mapping_path = os.path.join(data_dir, 'mapping.json')
+
+            mapping_path = os.path.join(data_dir, "mapping.json")
             if os.path.exists(mapping_path):
                 os.remove(mapping_path)
-            
+
             # \u8c03\u7528run_rag.py\u5904\u7406\u6587\u6863
-            cmd = [sys.executable, 'run_rag.py', data_dir, '--reparse']
+            cmd = [sys.executable, "run_rag.py", data_dir, "--reparse"]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            
+
             if result.returncode != 0:
                 print(f"Error processing documents: {result.stderr}")
                 return False, result.stderr
-            
+
             return True, ""
-        
+
         except Exception as e:
             print(f"Error: {str(e)}")
             return False, str(e)
 
+
 def run_server(port=8000):
     """\u8fd0\u884cWeb\u670d\u52a1\u5668"""
-    server_address = ('', port)
+    server_address = ("", port)
     httpd = HTTPServer(server_address, RAGServer)
     print(f"\u542f\u52a8\u670d\u52a1\u5668\u5728 http://localhost:{port}")
     print("\u6309Ctrl+C\u505c\u6b62\u670d\u52a1\u5668")
     httpd.serve_forever()
+
 
 def open_browser(port=8000):
     """\u6253\u5f00\u6d4f\u89c8\u5668"""
@@ -626,40 +631,55 @@ def open_browser(port=8000):
     time.sleep(1)
     webbrowser.open(f"http://localhost:{port}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='RAG-Anything Web\u754c\u9762')
-    parser.add_argument('--port', type=int, default=8000, help='\u670d\u52a1\u5668\u7aef\u53e3 (\u9ed8\u8ba4: 8000)')
-    parser.add_argument('--no-browser', action='store_true', help='\u4e0d\u81ea\u52a8\u6253\u5f00\u6d4f\u89c8\u5668')
-    
+    parser = argparse.ArgumentParser(description="RAG-Anything Web\u754c\u9762")
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="\u670d\u52a1\u5668\u7aef\u53e3 (\u9ed8\u8ba4: 8000)",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="\u4e0d\u81ea\u52a8\u6253\u5f00\u6d4f\u89c8\u5668",
+    )
+
     args = parser.parse_args()
-    
+
     # \u68c0\u67e5data\u76ee\u5f55\u662f\u5426\u5b58\u5728
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
     if not os.path.exists(data_dir):
         print(f"\u8b66\u544a: data\u76ee\u5f55\u4e0d\u5b58\u5728: {data_dir}")
         print("\u521b\u5efadata\u76ee\u5f55...")
         os.makedirs(data_dir)
-    
+
     # \u68c0\u67e5\u662f\u5426\u6709PDF\u6587\u4ef6
-    pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith('.pdf')]
+    pdf_files = [f for f in os.listdir(data_dir) if f.lower().endswith(".pdf")]
     if not pdf_files:
         print("\u8b66\u544a: data\u76ee\u5f55\u4e2d\u6ca1\u6709PDF\u6587\u4ef6")
         print("\u8bf7\u5c06PDF\u6587\u4ef6\u653e\u5165data\u76ee\u5f55")
     else:
-        print(f"\u627e\u5230 {len(pdf_files)} \u4e2aPDF\u6587\u4ef6: {', '.join(pdf_files)}")
-    
+        print(
+            f"\u627e\u5230 {len(pdf_files)} \u4e2aPDF\u6587\u4ef6: {', '.join(pdf_files)}"
+        )
+
     # \u68c0\u67e5\u662f\u5426\u5df2\u7ecf\u5904\u7406\u8fc7\u6587\u6863
-    chunks_path = os.path.join(data_dir, 'chunks.jsonl')
+    chunks_path = os.path.join(data_dir, "chunks.jsonl")
     if not os.path.exists(chunks_path):
         print("\u8b66\u544a: \u6ca1\u6709\u627e\u5230chunks.jsonl\u6587\u4ef6")
-        print("\u7cfb\u7edf\u5c06\u5728\u7b2c\u4e00\u6b21\u67e5\u8be2\u65f6\u5904\u7406\u6587\u6863")
-    
+        print(
+            "\u7cfb\u7edf\u5c06\u5728\u7b2c\u4e00\u6b21\u67e5\u8be2\u65f6\u5904\u7406\u6587\u6863"
+        )
+
     # \u542f\u52a8\u6d4f\u89c8\u5668
     if not args.no_browser:
         threading.Thread(target=open_browser, args=(args.port,)).start()
-    
+
     # \u542f\u52a8\u670d\u52a1\u5668
     run_server(args.port)
+
 
 if __name__ == "__main__":
     main()

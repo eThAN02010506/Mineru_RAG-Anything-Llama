@@ -6,16 +6,11 @@ from typing import AsyncIterable, Iterable, List, Optional, Set, Tuple, Union
 
 import httpx
 
-from .base_predictor import (
-    DEFAULT_MAX_NEW_TOKENS,
-    DEFAULT_NO_REPEAT_NGRAM_SIZE,
-    DEFAULT_PRESENCE_PENALTY,
-    DEFAULT_REPETITION_PENALTY,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_TOP_K,
-    DEFAULT_TOP_P,
-    BasePredictor,
-)
+from .base_predictor import (DEFAULT_MAX_NEW_TOKENS,
+                             DEFAULT_NO_REPEAT_NGRAM_SIZE,
+                             DEFAULT_PRESENCE_PENALTY,
+                             DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE,
+                             DEFAULT_TOP_K, DEFAULT_TOP_P, BasePredictor)
 from .utils import aio_load_resource, load_resource
 
 
@@ -57,9 +52,13 @@ class SglangClientPredictor(BasePredictor):
 
     def check_server_health(self, base_url: str):
         try:
-            response = httpx.get(f"{base_url}/health_generate", timeout=self.http_timeout)
+            response = httpx.get(
+                f"{base_url}/health_generate", timeout=self.http_timeout
+            )
         except httpx.ConnectError:
-            raise RuntimeError(f"Failed to connect to server {base_url}. Please check if the server is running.")
+            raise RuntimeError(
+                f"Failed to connect to server {base_url}. Please check if the server is running."
+            )
         if response.status_code != 200:
             raise RuntimeError(
                 f"Server {base_url} is not healthy. Status code: {response.status_code}, response body: {response.text}"
@@ -67,9 +66,13 @@ class SglangClientPredictor(BasePredictor):
 
     def get_model_path(self, base_url: str) -> str:
         try:
-            response = httpx.get(f"{base_url}/get_model_info", timeout=self.http_timeout)
+            response = httpx.get(
+                f"{base_url}/get_model_info", timeout=self.http_timeout
+            )
         except httpx.ConnectError:
-            raise RuntimeError(f"Failed to connect to server {base_url}. Please check if the server is running.")
+            raise RuntimeError(
+                f"Failed to connect to server {base_url}. Please check if the server is running."
+            )
         if response.status_code != 200:
             raise RuntimeError(
                 f"Failed to get model info from {base_url}. Status code: {response.status_code}, response body: {response.text}"
@@ -157,7 +160,9 @@ class SglangClientPredictor(BasePredictor):
             image = load_resource(image)
 
         request_body = self.build_request_body(image, prompt, sampling_params)
-        response = httpx.post(self.server_url, json=request_body, timeout=self.http_timeout)
+        response = httpx.post(
+            self.server_url, json=request_body, timeout=self.http_timeout
+        )
         response_body = response.json()
         return response_body["text"]
 

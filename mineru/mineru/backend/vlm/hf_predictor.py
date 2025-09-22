@@ -8,16 +8,11 @@ from transformers import AutoTokenizer, BitsAndBytesConfig
 
 from ...model.vlm_hf_model import Mineru2QwenForCausalLM
 from ...model.vlm_hf_model.image_processing_mineru2 import process_images
-from .base_predictor import (
-    DEFAULT_MAX_NEW_TOKENS,
-    DEFAULT_NO_REPEAT_NGRAM_SIZE,
-    DEFAULT_PRESENCE_PENALTY,
-    DEFAULT_REPETITION_PENALTY,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_TOP_K,
-    DEFAULT_TOP_P,
-    BasePredictor,
-)
+from .base_predictor import (DEFAULT_MAX_NEW_TOKENS,
+                             DEFAULT_NO_REPEAT_NGRAM_SIZE,
+                             DEFAULT_PRESENCE_PENALTY,
+                             DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE,
+                             DEFAULT_TOP_K, DEFAULT_TOP_P, BasePredictor)
 from .utils import load_resource
 
 
@@ -132,7 +127,9 @@ class HuggingfacePredictor(BasePredictor):
             image = load_resource(image)
 
         image_obj = Image.open(BytesIO(image))
-        image_tensor = process_images([image_obj], self.image_processor, self.model.config)
+        image_tensor = process_images(
+            [image_obj], self.image_processor, self.model.config
+        )
         image_tensor = image_tensor[0].unsqueeze(0)
         image_tensor = image_tensor.to(device=self.model.device, dtype=self.model.dtype)
         image_sizes = [[*image_obj.size]]
@@ -180,7 +177,9 @@ class HuggingfacePredictor(BasePredictor):
         assert len(prompts) == len(images), "Length of prompts and images must match."
 
         outputs = []
-        for prompt, image in tqdm(zip(prompts, images), total=len(images), desc="Predict"):
+        for prompt, image in tqdm(
+            zip(prompts, images), total=len(images), desc="Predict"
+        ):
             output = self.predict(
                 image,
                 prompt,

@@ -4,7 +4,8 @@ Utility functions for RAGAnything
 Contains helper functions for content separation, text insertion, and other utilities
 """
 
-from typing import Dict, List, Any, Tuple
+from typing import Any, Dict, List, Tuple
+
 from lightrag.utils import logger
 
 

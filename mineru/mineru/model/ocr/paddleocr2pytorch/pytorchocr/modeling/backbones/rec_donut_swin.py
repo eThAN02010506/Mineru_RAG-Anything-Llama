@@ -1,6 +1,6 @@
 import collections.abc
-from collections import OrderedDict
 import math
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 
@@ -196,7 +196,9 @@ class DonutSwinEmbeddings(nn.Module):
             #     [1, 1, config.embed_dim], dtype="float32"
             # )
             self.mask_token = nn.Parameter(
-                nn.init.xavier_uniform_(torch.zeros(1, 1, config.embed_dim).to(torch.float32))
+                nn.init.xavier_uniform_(
+                    torch.zeros(1, 1, config.embed_dim).to(torch.float32)
+                )
             )
             nn.init.zeros_(self.mask_token)
         else:
@@ -206,7 +208,9 @@ class DonutSwinEmbeddings(nn.Module):
             #     [1, num_patches + 1, config.embed_dim], dtype="float32"
             # )
             self.position_embeddings = nn.Parameter(
-                nn.init.xavier_uniform_(torch.zeros(1, num_patches + 1, config.embed_dim).to(torch.float32))
+                nn.init.xavier_uniform_(
+                    torch.zeros(1, num_patches + 1, config.embed_dim).to(torch.float32)
+                )
             )
             nn.init.zeros_(self.position_embedding)
         else:
@@ -261,14 +265,14 @@ class MyConv2d(nn.Conv2d):
         # )
         self.weight = torch.Parameter(
             nn.init.xavier_uniform_(
-                torch.zeros(out_channels, in_channel, kernel_size[0], kernel_size[1]).to(torch.float32)
+                torch.zeros(
+                    out_channels, in_channel, kernel_size[0], kernel_size[1]
+                ).to(torch.float32)
             )
         )
         # self.bias = paddle.create_parameter([out_channels], dtype="float32")
         self.bias = torch.Parameter(
-            nn.init.xavier_uniform_(
-                torch.zeros(out_channels).to(torch.float32)
-            )
+            nn.init.xavier_uniform_(torch.zeros(out_channels).to(torch.float32))
         )
         nn.init.ones_(self.weight)
         nn.init.zeros_(self.bias)
@@ -473,7 +477,10 @@ class DonutSwinSelfAttention(nn.Module):
         # )
         self.relative_position_bias_table = torch.Parameter(
             nn.init.xavier_normal_(
-                torch.zeros((2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1), num_heads).to(torch.float32)
+                torch.zeros(
+                    (2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1),
+                    num_heads,
+                ).to(torch.float32)
             )
         )
 

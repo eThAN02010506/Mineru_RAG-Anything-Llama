@@ -4,18 +4,16 @@ Document processing functionality for RAGAnything
 Contains methods for parsing documents and processing multimodal content
 """
 
-import os
-import time
 import hashlib
 import json
-from typing import Dict, List, Any
+import os
+import time
 from pathlib import Path
-from raganything.parser import MineruParser, DoclingParser
-from raganything.utils import (
-    separate_content,
-    insert_text_content,
-    get_processor_for_type,
-)
+from typing import Any, Dict, List
+
+from raganything.parser import DoclingParser, MineruParser
+from raganything.utils import (get_processor_for_type, insert_text_content,
+                               separate_content)
 
 
 class ProcessorMixin:
@@ -587,11 +585,9 @@ class ProcessorMixin:
 
         # Batch merge all multimodal content results (similar to text content processing)
         if all_chunk_results:
+            from lightrag.kg.shared_storage import (get_namespace_data,
+                                                    get_pipeline_status_lock)
             from lightrag.operate import merge_nodes_and_edges
-            from lightrag.kg.shared_storage import (
-                get_namespace_data,
-                get_pipeline_status_lock,
-            )
 
             # Get pipeline status and lock from shared storage
             pipeline_status = await get_namespace_data("pipeline_status")

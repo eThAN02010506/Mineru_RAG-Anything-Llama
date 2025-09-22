@@ -1,4 +1,3 @@
-
 from abc import ABC, abstractmethod
 
 
@@ -51,12 +50,12 @@ class DataWriter(ABC):
 
         def safe_encode(data: str, method: str):
             try:
-                bit_data = data.encode(encoding=method, errors='replace')
+                bit_data = data.encode(encoding=method, errors="replace")
                 return bit_data, True
             except:  # noqa
                 return None, False
 
-        for method in ['utf-8', 'ascii']:
+        for method in ["utf-8", "ascii"]:
             bit_data, flag = safe_encode(data, method)
             if flag:
                 self.write(path, bit_data)

@@ -3,12 +3,14 @@ import time
 
 from loguru import logger
 
-from ...data.data_reader_writer import DataWriter
 from mineru.utils.pdf_image_tools import load_images_from_pdf
+
+from ...data.data_reader_writer import DataWriter
+from ...utils.models_download_utils import \
+    auto_download_and_get_model_root_path
 from .base_predictor import BasePredictor
 from .predictor import get_predictor
 from .token_to_middle_json import result_to_middle_json
-from ...utils.models_download_utils import auto_download_and_get_model_root_path
 
 
 class ModelSingleton:
@@ -29,8 +31,8 @@ class ModelSingleton:
     ) -> BasePredictor:
         key = (backend, model_path, server_url)
         if key not in self._models:
-            if backend in ['transformers', 'sglang-engine'] and not model_path:
-                model_path = auto_download_and_get_model_root_path("/","vlm")
+            if backend in ["transformers", "sglang-engine"] and not model_path:
+                model_path = auto_download_and_get_model_root_path("/", "vlm")
             self._models[key] = get_predictor(
                 backend=backend,
                 model_path=model_path,
@@ -50,7 +52,9 @@ def doc_analyze(
     **kwargs,
 ):
     if predictor is None:
-        predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
+        predictor = ModelSingleton().get_model(
+            backend, model_path, server_url, **kwargs
+        )
 
     # load_images_start = time.time()
     images_list, pdf_doc = load_images_from_pdf(pdf_bytes)
@@ -77,7 +81,9 @@ async def aio_doc_analyze(
     **kwargs,
 ):
     if predictor is None:
-        predictor = ModelSingleton().get_model(backend, model_path, server_url, **kwargs)
+        predictor = ModelSingleton().get_model(
+            backend, model_path, server_url, **kwargs
+        )
 
     # load_images_start = time.time()
     images_list, pdf_doc = load_images_from_pdf(pdf_bytes)

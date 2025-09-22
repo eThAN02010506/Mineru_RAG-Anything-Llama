@@ -1,9 +1,11 @@
-import os
 import json
+import os
+
 import faiss
 import numpy as np
-from sentence_transformers import SentenceTransformer
 from llama_cpp import Llama
+from sentence_transformers import SentenceTransformer
+
 
 def query(question, index_dir, top_k=3):
     """
@@ -11,21 +13,26 @@ def query(question, index_dir, top_k=3):
     """
     # 索引与映射文件路径
     faiss_index_path = os.path.join(index_dir, "faiss_index.index")
-    mapping_path     = os.path.join(index_dir, "mapping.json")
+    mapping_path = os.path.join(index_dir, "mapping.json")
 
     # 模型文件路径
-    script_dir       = os.path.dirname(os.path.abspath(__file__))
+    script_dir = os.path.dirname(os.path.abspath(__file__))
     llama_model_path = os.path.join(script_dir, "models", "llama", "mistral-7b.gguf")
     embed_model_path = os.path.join(script_dir, "models", "all-MiniLM-L6-v2")
 
     # 检查所有必需文件
-    for file_path in (faiss_index_path, mapping_path, llama_model_path, embed_model_path):
+    for file_path in (
+        faiss_index_path,
+        mapping_path,
+        llama_model_path,
+        embed_model_path,
+    ):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"错误: 必需文件未找到: {file_path}")
 
     # 加载 embedding 模型
     print("正在加载离线 embedding 模型...")
-    embedder = SentenceTransformer(embed_model_path, device='cpu')
+    embedder = SentenceTransformer(embed_model_path, device="cpu")
 
     # 加载 FAISS 索引和文本片段
     print("正在加载向量索引和文本片段映射...")
@@ -36,20 +43,21 @@ def query(question, index_dir, top_k=3):
 
     # 生成查询向量并搜索最相关片段
     print("正在生成查询向量并搜索最相关片段...")
-    q_emb = embedder.encode([question], device='cpu').astype("float32")
+    q_emb = embedder.encode([question], device="cpu").astype("float32")
     k = min(top_k, len(chunks), index.ntotal)
     distances, indices = index.search(q_emb, k=k)
     print(f"找到 {k} 个相关片段：")
     relevant_chunks = []
     for i, idx in enumerate(indices[0]):
         dist = float(distances[0][i])
-        txt  = chunks[idx]
+        txt = chunks[idx]
         print(f"  片段{i+1}: 距离 {dist:.4f}")
         relevant_chunks.append(txt)
 
     # 构建上下文字符串
-    context = "\n\n".join(f"[片段{i+1}]\n{txt}"
-                          for i, txt in enumerate(relevant_chunks))
+    context = "\n\n".join(
+        f"[片段{i+1}]\n{txt}" for i, txt in enumerate(relevant_chunks)
+    )
 
     # —— 改成“详细回答” Prompt，并抑制标题格式
     prompt = f"""请根据以下文档内容，详尽回答下面这个问题（无需再加任何“# 回答”这样的标题）：
@@ -84,11 +92,7 @@ def query(question, index_dir, top_k=3):
     )
 
     print("正在生成回答...")
-    response = llm(
-        prompt,
-        max_tokens=256,
-        echo=False
-    )
+    response = llm(prompt, max_tokens=256, echo=False)
 
     # 调试：打印原始返回结果
     print("🔍 RAW RESPONSE =====")
@@ -99,6 +103,7 @@ def query(question, index_dir, top_k=3):
     answer = response["choices"][0]["text"].strip()
     return f"{answer}\n\n回答基于 {len(relevant_chunks)} 个文档片段"
 
+
 def interactive_query(index_dir):
     """
     交互式查询模式
@@ -106,17 +111,19 @@ def interactive_query(index_dir):
     print("进入交互式模式，输入 'quit' 或 'exit' 退出。")
     while True:
         question = input("请输入问题: ").strip()
-        if question.lower() in ['quit', 'exit', 'q', '退出']:
+        if question.lower() in ["quit", "exit", "q", "退出"]:
             print("再见！")
             break
         if not question:
             continue
-        print("="*40)
+        print("=" * 40)
         print("回答:\n" + query(question, index_dir))
-        print("="*40)
+        print("=" * 40)
+
 
 if __name__ == "__main__":
     import sys
+
     if len(sys.argv) < 2:
         print("用法: python query.py <index_dir> [问题]")
         sys.exit(1)

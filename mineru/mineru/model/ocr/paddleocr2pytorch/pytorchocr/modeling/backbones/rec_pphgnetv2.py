@@ -1,10 +1,12 @@
 import math
+from typing import Callable, Dict, List, Union
+
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+
 from .rec_donut_swin import DonutSwinModelOutput
-from typing import List, Dict, Union, Callable
 
 
 class IdentityBasedConv1x1(nn.Conv2d):
@@ -660,7 +662,9 @@ class TheseusLayer(nn.Module):
             return False
         return True
 
-    def update_res(self, return_patterns: Union[str, List[str]]) -> Dict[str, nn.Module]:
+    def update_res(
+        self, return_patterns: Union[str, List[str]]
+    ) -> Dict[str, nn.Module]:
         """update the result(s) to be returned.
 
         Args:
@@ -830,9 +834,7 @@ class LearnableAffineBlock(TheseusLayer):
         # )
         # self.add_parameter("scale", self.scale)
         self.scale = torch.Parameter(
-            nn.init.constant_(
-                torch.ones(1).to(torch.float32), val=scale_value
-            )
+            nn.init.constant_(torch.ones(1).to(torch.float32), val=scale_value)
         )
         self.register_parameter("scale", self.scale)
 
@@ -845,9 +847,7 @@ class LearnableAffineBlock(TheseusLayer):
         # )
         # self.add_parameter("bias", self.bias)
         self.bias = torch.Parameter(
-            nn.init.constant_(
-                torch.ones(1).to(torch.float32), val=bias_value
-            )
+            nn.init.constant_(torch.ones(1).to(torch.float32), val=bias_value)
         )
         self.register_parameter("bias", self.bias)
 
@@ -968,11 +968,17 @@ class PaddingSameAsPaddleMaxPool2d(torch.nn.Module):
 
     def forward(self, x):
         _, _, h, w = x.shape
-        pad_h_total = max(0, (math.ceil(h / self.stride) - 1) * self.stride + self.kernel_size - h)
-        pad_w_total = max(0, (math.ceil(w / self.stride) - 1) * self.stride + self.kernel_size - w)
+        pad_h_total = max(
+            0, (math.ceil(h / self.stride) - 1) * self.stride + self.kernel_size - h
+        )
+        pad_w_total = max(
+            0, (math.ceil(w / self.stride) - 1) * self.stride + self.kernel_size - w
+        )
         pad_h = pad_h_total // 2
         pad_w = pad_w_total // 2
-        x = torch.nn.functional.pad(x, [pad_w, pad_w_total - pad_w, pad_h, pad_h_total - pad_h])
+        x = torch.nn.functional.pad(
+            x, [pad_w, pad_w_total - pad_w, pad_h, pad_h_total - pad_h]
+        )
         return self.pool(x)
 
 
@@ -1041,7 +1047,8 @@ class StemBlock(TheseusLayer):
             lr_mult=lr_mult,
         )
         self.pool = PaddingSameAsPaddleMaxPool2d(
-            kernel_size=2, stride=1,
+            kernel_size=2,
+            stride=1,
         )
 
     def forward(self, x):

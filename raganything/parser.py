@@ -11,23 +11,14 @@ For Office documents (.doc, .docx, .ppt, .pptx), please convert them to PDF form
 
 from __future__ import annotations
 
-
-import json
 import argparse
 import base64
+import json
+import logging
 import subprocess
 import tempfile
-import logging
 from pathlib import Path
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Union,
-    Tuple,
-    Any,
-    TypeVar,
-)
+from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 T = TypeVar("T")
 
@@ -246,10 +237,12 @@ class Parser:
 
             try:
                 from reportlab.lib.pagesizes import A4
-                from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                from reportlab.lib.styles import (ParagraphStyle,
+                                                  getSampleStyleSheet)
                 from reportlab.lib.units import inch
                 from reportlab.pdfbase import pdfmetrics
+                from reportlab.platypus import (Paragraph, SimpleDocTemplate,
+                                                Spacer)
 
                 # Create PDF document
                 doc = SimpleDocTemplate(
@@ -276,9 +269,8 @@ class Parser:
                         # Try common Windows fonts
                         for font_name in ["SimSun", "SimHei", "Microsoft YaHei"]:
                             try:
-                                from reportlab.pdfbase.cidfonts import (
-                                    UnicodeCIDFont,
-                                )
+                                from reportlab.pdfbase.cidfonts import \
+                                    UnicodeCIDFont
 
                                 pdfmetrics.registerFont(UnicodeCIDFont(font_name))
                                 normal_style.fontName = font_name
@@ -289,9 +281,8 @@ class Parser:
                     elif system == "Darwin":  # macOS
                         for font_name in ["STSong-Light", "STHeiti"]:
                             try:
-                                from reportlab.pdfbase.cidfonts import (
-                                    UnicodeCIDFont,
-                                )
+                                from reportlab.pdfbase.cidfonts import \
+                                    UnicodeCIDFont
 
                                 pdfmetrics.registerFont(UnicodeCIDFont(font_name))
                                 normal_style.fontName = font_name

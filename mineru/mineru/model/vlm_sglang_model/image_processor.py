@@ -4,21 +4,22 @@ import re
 from typing import List, Optional, Union
 
 import numpy as np
-
-from sglang.version import __version__ as sglang_version
 from packaging import version
+from sglang.version import __version__ as sglang_version
+
 if version.parse(sglang_version) >= version.parse("0.4.9"):
     # sglang >= 0.4.9
-    from sglang.srt.multimodal.processors.base_processor import (
-        BaseMultimodalProcessor as BaseProcessor,
-    )
-    from sglang.srt.multimodal.mm_utils import divide_to_patches, expand2square, select_best_resolution
+    from sglang.srt.multimodal.mm_utils import (divide_to_patches,
+                                                expand2square,
+                                                select_best_resolution)
+    from sglang.srt.multimodal.processors.base_processor import \
+        BaseMultimodalProcessor as BaseProcessor
 else:
     # 0.4.7 <= sglang < 0.4.9
-    from sglang.srt.managers.multimodal_processors.base_processor import (
-        BaseMultimodalProcessor as BaseProcessor,
-    )
-    from sglang.srt.mm_utils import divide_to_patches, expand2square, select_best_resolution
+    from sglang.srt.managers.multimodal_processors.base_processor import \
+        BaseMultimodalProcessor as BaseProcessor
+    from sglang.srt.mm_utils import (divide_to_patches, expand2square,
+                                     select_best_resolution)
 
 get_global_processor = None
 from sglang.srt.utils import load_image, logger
@@ -31,12 +32,20 @@ from .model import Mineru2QwenForCausalLM
 def process_anyres_image(image, processor, grid_pinpoints):
     if isinstance(grid_pinpoints, str) and "x" in grid_pinpoints:
         patch_size = processor.crop_size["height"]
-        assert patch_size in [224, 336, 384, 448, 512], "patch_size should be in [224, 336, 384, 448, 512]"
+        assert patch_size in [
+            224,
+            336,
+            384,
+            448,
+            512,
+        ], "patch_size should be in [224, 336, 384, 448, 512]"
         matches = re.findall(r"\((\d+)x(\d+)\)", grid_pinpoints)
         range_start = tuple(map(int, matches[0]))
         range_end = tuple(map(int, matches[-1]))
         grid_pinpoints = [
-            (i, j) for i in range(range_start[0], range_end[0] + 1) for j in range(range_start[1], range_end[1] + 1)
+            (i, j)
+            for i in range(range_start[0], range_end[0] + 1)
+            for j in range(range_start[1], range_end[1] + 1)
         ]
         grid_pinpoints = [[dim * patch_size for dim in pair] for pair in grid_pinpoints]
 
@@ -48,10 +57,15 @@ def process_anyres_image(image, processor, grid_pinpoints):
 
     image_best_res = image.resize(best_resolution)  # <<<<<<< Here changed
     patches = divide_to_patches(image_best_res, processor.crop_size["height"])
-    image_original_resize = image.resize((processor.crop_size["height"], processor.crop_size["height"]))
+    image_original_resize = image.resize(
+        (processor.crop_size["height"], processor.crop_size["height"])
+    )
 
     image_patches = [image_original_resize] + patches
-    image_patches = [processor.preprocess(image_patch)["pixel_values"][0] for image_patch in image_patches]
+    image_patches = [
+        processor.preprocess(image_patch)["pixel_values"][0]
+        for image_patch in image_patches
+    ]
     return np.stack(image_patches, axis=0)
 
 
@@ -86,16 +100,25 @@ class Mineru2ImageProcessor(BaseProcessor):
                         image,
                         tuple(int(x * 255) for x in image_processor.image_mean),
                     )
-                    pixel_values = image_processor(image.convert("RGB"))["pixel_values"][0]
-                elif image_aspect_ratio == "anyres" or (image_aspect_ratio is not None and "anyres_max" in image_aspect_ratio):
-                    pixel_values = process_anyres_image(image, image_processor, image_grid_pinpoints)
+                    pixel_values = image_processor(image.convert("RGB"))[
+                        "pixel_values"
+                    ][0]
+                elif image_aspect_ratio == "anyres" or (
+                    image_aspect_ratio is not None
+                    and "anyres_max" in image_aspect_ratio
+                ):
+                    pixel_values = process_anyres_image(
+                        image, image_processor, image_grid_pinpoints
+                    )
                 else:
                     pixel_values = image_processor(image)["pixel_values"][0]
                 return pixel_values, image_hash, image.size
         except Exception:
             logger.error("Exception in TokenizerManager:\n" + get_exception_traceback())
 
-    async def _process_single_image(self, image_data: Union[bytes, str], aspect_ratio: str, grid_pinpoints: str):
+    async def _process_single_image(
+        self, image_data: Union[bytes, str], aspect_ratio: str, grid_pinpoints: str
+    ):
         if hasattr(self, "cpu_executor"):
             executor = self.cpu_executor
         else:
@@ -132,7 +155,8 @@ class Mineru2ImageProcessor(BaseProcessor):
         *args,
         **kwargs,
     ):
-        from sglang.srt.managers.schedule_batch import Modality, MultimodalDataItem
+        from sglang.srt.managers.schedule_batch import (Modality,
+                                                        MultimodalDataItem)
 
         if not image_data:
             return None
@@ -142,7 +166,7 @@ class Mineru2ImageProcessor(BaseProcessor):
         grid_pinpoints = (
             self.hf_config.image_grid_pinpoints
             if hasattr(self.hf_config, "image_grid_pinpoints")
-               and "anyres" in aspect_ratio
+            and "anyres" in aspect_ratio
             else None
         )
 
@@ -209,5 +233,6 @@ class Mineru2ImageProcessor(BaseProcessor):
                     )
                 ],
             }
+
 
 ImageProcessorMapping = {Mineru2QwenForCausalLM: Mineru2ImageProcessor}

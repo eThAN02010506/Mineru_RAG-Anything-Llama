@@ -4,16 +4,11 @@ from typing import AsyncIterable, Iterable, List, Optional, Union
 from sglang.srt.server_args import ServerArgs
 
 from ...model.vlm_sglang_model.engine import BatchEngine
-from .base_predictor import (
-    DEFAULT_MAX_NEW_TOKENS,
-    DEFAULT_NO_REPEAT_NGRAM_SIZE,
-    DEFAULT_PRESENCE_PENALTY,
-    DEFAULT_REPETITION_PENALTY,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_TOP_K,
-    DEFAULT_TOP_P,
-    BasePredictor,
-)
+from .base_predictor import (DEFAULT_MAX_NEW_TOKENS,
+                             DEFAULT_NO_REPEAT_NGRAM_SIZE,
+                             DEFAULT_PRESENCE_PENALTY,
+                             DEFAULT_REPETITION_PENALTY, DEFAULT_TEMPERATURE,
+                             DEFAULT_TOP_K, DEFAULT_TOP_P, BasePredictor)
 
 
 class SglangEnginePredictor(BasePredictor):

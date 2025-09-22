@@ -5,8 +5,8 @@ Contains methods for processing multiple files in batches
 """
 
 import asyncio
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
 
 class BatchMixin:

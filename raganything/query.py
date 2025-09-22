@@ -4,12 +4,14 @@ Query functionality for RAGAnything
 Contains all query-related methods for both text and multimodal queries
 """
 
-import json
 import hashlib
-from typing import Dict, List, Any
+import json
 from pathlib import Path
+from typing import Any, Dict, List
+
 from lightrag import QueryParam
 from lightrag.utils import always_get_an_event_loop
+
 from raganything.prompt import PROMPTS
 from raganything.utils import get_processor_for_type
 

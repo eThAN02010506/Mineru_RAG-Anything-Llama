@@ -1,11 +1,12 @@
-
-import os
-import sys
-import subprocess
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
+
 from embed import embed_chunks
-from query import query, interactive_query
+from query import interactive_query, query
+
 
 def run_pipeline(pdf_dir, question=None, force_reparse=False):
     """
@@ -14,30 +15,44 @@ def run_pipeline(pdf_dir, question=None, force_reparse=False):
     # \u8bbe\u7f6e\u73af\u5883\u53d8\u91cf\uff0c\u5f3a\u5236\u79bb\u7ebf\u6a21\u5f0f
     os.environ["HF_DATASETS_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    
+
     print("\u542f\u52a8\u79bb\u7ebfRAG\u7cfb\u7edf")
     print("\u76ee\u6807\u76ee\u5f55: {}".format(pdf_dir))
-    
+
     # \u68c0\u67e5\u76ee\u5f55
     if not os.path.exists(pdf_dir):
-        raise FileNotFoundError("\u9519\u8bef: \u76ee\u5f55\u4e0d\u5b58\u5728: {}".format(pdf_dir))
-    
+        raise FileNotFoundError(
+            "\u9519\u8bef: \u76ee\u5f55\u4e0d\u5b58\u5728: {}".format(pdf_dir)
+        )
+
     # \u6587\u4ef6\u8def\u5f84
     chunk_jsonl_path = os.path.join(pdf_dir, "chunks.jsonl")
     faiss_index_path = os.path.join(pdf_dir, "faiss_index.index")
     mapping_path = os.path.join(pdf_dir, "mapping.json")
 
     # 1. \u68c0\u67e5PDF\u6587\u4ef6
-    pdf_files = [f for f in os.listdir(pdf_dir) if f.lower().endswith('.pdf')]
+    pdf_files = [f for f in os.listdir(pdf_dir) if f.lower().endswith(".pdf")]
     if not pdf_files:
-        print("\u8b66\u544a: \u5728\u76ee\u5f55 {} \u4e2d\u672a\u627e\u5230PDF\u6587\u4ef6".format(pdf_dir))
+        print(
+            "\u8b66\u544a: \u5728\u76ee\u5f55 {} \u4e2d\u672a\u627e\u5230PDF\u6587\u4ef6".format(
+                pdf_dir
+            )
+        )
         # \u68c0\u67e5\u662f\u5426\u5df2\u6709\u5904\u7406\u597d\u7684chunks.jsonl
         if not os.path.exists(chunk_jsonl_path):
-            raise ValueError("\u9519\u8bef: \u65e2\u6ca1\u6709PDF\u6587\u4ef6\u4e5f\u6ca1\u6709chunks.jsonl\u6587\u4ef6")
+            raise ValueError(
+                "\u9519\u8bef: \u65e2\u6ca1\u6709PDF\u6587\u4ef6\u4e5f\u6ca1\u6709chunks.jsonl\u6587\u4ef6"
+            )
         else:
-            print("\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684chunks.jsonl\u6587\u4ef6")
+            print(
+                "\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684chunks.jsonl\u6587\u4ef6"
+            )
     else:
-        print("\u627e\u5230 {} \u4e2aPDF\u6587\u4ef6: {}".format(len(pdf_files), ', '.join(pdf_files)))
+        print(
+            "\u627e\u5230 {} \u4e2aPDF\u6587\u4ef6: {}".format(
+                len(pdf_files), ", ".join(pdf_files)
+            )
+        )
 
     # 2. \u89e3\u6790PDF (\u5982\u679c\u9700\u8981)
     if force_reparse or (pdf_files and not os.path.exists(chunk_jsonl_path)):
@@ -48,58 +63,90 @@ def run_pipeline(pdf_dir, question=None, force_reparse=False):
             env = os.environ.copy()
             env["HF_DATASETS_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
-            
-            result = subprocess.run([
-                sys.executable, "parse_with_mineru.py", pdf_dir, pdf_dir
-            ], check=True, capture_output=True, text=True, env=env)
+
+            result = subprocess.run(
+                [sys.executable, "parse_with_mineru.py", pdf_dir, pdf_dir],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
             print("\u6210\u529f: PDF\u89e3\u6790\u5b8c\u6210")
             if result.stdout:
                 print(result.stdout)
-                
+
             # \u68c0\u67e5\u662f\u5426\u6210\u529f\u521b\u5efa\u4e86chunks.jsonl\u6587\u4ef6
-            if not os.path.exists(chunk_jsonl_path) or os.path.getsize(chunk_jsonl_path) == 0:
-                print("\u8b66\u544a: parse_with_mineru.py\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6")
-                raise Exception("\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6")
-                
+            if (
+                not os.path.exists(chunk_jsonl_path)
+                or os.path.getsize(chunk_jsonl_path) == 0
+            ):
+                print(
+                    "\u8b66\u544a: parse_with_mineru.py\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6"
+                )
+                raise Exception(
+                    "\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6"
+                )
+
         except Exception as e:
-            print("\u8b66\u544a: parse_with_mineru.py\u89e3\u6790\u5931\u8d25: {}".format(e))
-            if hasattr(e, 'stderr') and e.stderr:
+            print(
+                "\u8b66\u544a: parse_with_mineru.py\u89e3\u6790\u5931\u8d25: {}".format(
+                    e
+                )
+            )
+            if hasattr(e, "stderr") and e.stderr:
                 print("\u9519\u8bef\u4fe1\u606f: {}".format(e.stderr))
-            
+
             # \u5c1d\u8bd5\u4f7f\u7528\u5907\u7528\u89e3\u6790\u5668
-            print("\u5c1d\u8bd5\u4f7f\u7528\u5907\u7528\u89e3\u6790\u5668simple_pdf_parser.py...")
+            print(
+                "\u5c1d\u8bd5\u4f7f\u7528\u5907\u7528\u89e3\u6790\u5668simple_pdf_parser.py..."
+            )
             try:
                 # \u68c0\u67e5\u662f\u5426\u6709simple_pdf_parser.py
                 if not os.path.exists("simple_pdf_parser.py"):
                     # \u521b\u5efa\u7b80\u5355\u89e3\u6790\u5668
                     create_simple_parser()
-                
+
                 env = os.environ.copy()
                 env["HF_DATASETS_OFFLINE"] = "1"
                 env["TRANSFORMERS_OFFLINE"] = "1"
-                
-                result = subprocess.run([
-                    sys.executable, "simple_pdf_parser.py", pdf_dir, pdf_dir
-                ], check=True, capture_output=True, text=True, env=env)
+
+                result = subprocess.run(
+                    [sys.executable, "simple_pdf_parser.py", pdf_dir, pdf_dir],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                )
                 print("\u6210\u529f: \u5907\u7528\u89e3\u6790\u5668\u6210\u529f")
                 if result.stdout:
                     print(result.stdout)
             except Exception as backup_e:
-                print("\u9519\u8bef: \u5907\u7528\u89e3\u6790\u5668\u4e5f\u5931\u8d25\u4e86: {}".format(backup_e))
-                
+                print(
+                    "\u9519\u8bef: \u5907\u7528\u89e3\u6790\u5668\u4e5f\u5931\u8d25\u4e86: {}".format(
+                        backup_e
+                    )
+                )
+
                 # \u521b\u5efa\u4e00\u4e2a\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6
                 print("\u521b\u5efa\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6...")
                 with open(chunk_jsonl_path, "w", encoding="utf-8") as f:
                     for pdf_file in pdf_files:
                         chunk = {
-                            "text": "\u8fd9\u662f\u6587\u6863 {} \u7684\u5185\u5bb9\u3002\u7531\u4e8e\u89e3\u6790\u5668\u5931\u8d25\uff0c\u8fd9\u662f\u4e00\u4e2a\u5360\u4f4d\u7b26\u3002".format(pdf_file),
-                            "source": pdf_file
+                            "text": "\u8fd9\u662f\u6587\u6863 {} \u7684\u5185\u5bb9\u3002\u7531\u4e8e\u89e3\u6790\u5668\u5931\u8d25\uff0c\u8fd9\u662f\u4e00\u4e2a\u5360\u4f4d\u7b26\u3002".format(
+                                pdf_file
+                            ),
+                            "source": pdf_file,
                         }
-                        f.write(json.dumps(chunk, ensure_ascii=False) + "\
-")
+                        f.write(
+                            json.dumps(chunk, ensure_ascii=False)
+                            + "\
+"
+                        )
                 print("\u521b\u5efa\u4e86\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6")
     else:
-        print("\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684\u6587\u672c\u7247\u6bb5\u6587\u4ef6\uff0c\u8df3\u8fc7PDF\u89e3\u6790")
+        print(
+            "\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684\u6587\u672c\u7247\u6bb5\u6587\u4ef6\uff0c\u8df3\u8fc7PDF\u89e3\u6790"
+        )
 
     # 2.5 \u9a8c\u8bc1chunks.jsonl\u6587\u4ef6
     if os.path.exists(chunk_jsonl_path):
@@ -113,71 +160,129 @@ def run_pipeline(pdf_dir, question=None, force_reparse=False):
                         try:
                             data = json.loads(line)
                             text = data.get("text", "").strip()
-                            if text and len(text) > 10:  # \u8fc7\u6ee4\u592a\u77ed\u7684\u6587\u672c
+                            if (
+                                text and len(text) > 10
+                            ):  # \u8fc7\u6ee4\u592a\u77ed\u7684\u6587\u672c
                                 valid_chunks += 1
                         except json.JSONDecodeError:
                             continue
-            
-            print("\u627e\u5230 {} \u4e2a\u6709\u6548\u6587\u672c\u7247\u6bb5".format(valid_chunks))
-            
+
+            print(
+                "\u627e\u5230 {} \u4e2a\u6709\u6548\u6587\u672c\u7247\u6bb5".format(
+                    valid_chunks
+                )
+            )
+
             if valid_chunks == 0:
-                print("\u8b66\u544a: chunks.jsonl\u6587\u4ef6\u4e2d\u6ca1\u6709\u6709\u6548\u7684\u6587\u672c\u7247\u6bb5\uff0c\u5c06\u91cd\u65b0\u89e3\u6790PDF")
+                print(
+                    "\u8b66\u544a: chunks.jsonl\u6587\u4ef6\u4e2d\u6ca1\u6709\u6709\u6548\u7684\u6587\u672c\u7247\u6bb5\uff0c\u5c06\u91cd\u65b0\u89e3\u6790PDF"
+                )
                 force_reparse = True
                 # \u91cd\u65b0\u89e3\u6790PDF
                 if pdf_files:
                     try:
                         # \u5220\u9664\u65e0\u6548\u7684chunks\u6587\u4ef6
                         os.remove(chunk_jsonl_path)
-                        print("\u5df2\u5220\u9664\u65e0\u6548\u7684chunks\u6587\u4ef6: {}".format(chunk_jsonl_path))
-                        
+                        print(
+                            "\u5df2\u5220\u9664\u65e0\u6548\u7684chunks\u6587\u4ef6: {}".format(
+                                chunk_jsonl_path
+                            )
+                        )
+
                         # \u9996\u5148\u5c1d\u8bd5\u4f7f\u7528parse_with_mineru.py
                         print("\u5c1d\u8bd5\u4f7f\u7528parse_with_mineru.py...")
                         try:
                             env = os.environ.copy()
                             env["HF_DATASETS_OFFLINE"] = "1"
                             env["TRANSFORMERS_OFFLINE"] = "1"
-                            
-                            result = subprocess.run([
-                                sys.executable, "parse_with_mineru.py", pdf_dir, pdf_dir
-                            ], check=True, capture_output=True, text=True, env=env)
+
+                            result = subprocess.run(
+                                [
+                                    sys.executable,
+                                    "parse_with_mineru.py",
+                                    pdf_dir,
+                                    pdf_dir,
+                                ],
+                                check=True,
+                                capture_output=True,
+                                text=True,
+                                env=env,
+                            )
                             print("\u6210\u529f: PDF\u89e3\u6790\u5b8c\u6210")
-                            
+
                             # \u68c0\u67e5\u662f\u5426\u6210\u529f\u521b\u5efa\u4e86chunks.jsonl\u6587\u4ef6
-                            if not os.path.exists(chunk_jsonl_path) or os.path.getsize(chunk_jsonl_path) == 0:
-                                print("\u8b66\u544a: parse_with_mineru.py\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6")
-                                raise Exception("\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6")
-                                
+                            if (
+                                not os.path.exists(chunk_jsonl_path)
+                                or os.path.getsize(chunk_jsonl_path) == 0
+                            ):
+                                print(
+                                    "\u8b66\u544a: parse_with_mineru.py\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6"
+                                )
+                                raise Exception(
+                                    "\u672a\u80fd\u521b\u5efa\u6709\u6548\u7684chunks.jsonl\u6587\u4ef6"
+                                )
+
                         except Exception as mineru_e:
-                            print("\u8b66\u544a: parse_with_mineru.py\u89e3\u6790\u5931\u8d25: {}".format(mineru_e))
-                            
+                            print(
+                                "\u8b66\u544a: parse_with_mineru.py\u89e3\u6790\u5931\u8d25: {}".format(
+                                    mineru_e
+                                )
+                            )
+
                             # \u5c1d\u8bd5\u4f7f\u7528\u5907\u7528\u89e3\u6790\u5668
                             if not os.path.exists("simple_pdf_parser.py"):
                                 create_simple_parser()
-                            
+
                             env = os.environ.copy()
                             env["HF_DATASETS_OFFLINE"] = "1"
                             env["TRANSFORMERS_OFFLINE"] = "1"
-                            
-                            result = subprocess.run([
-                                sys.executable, "simple_pdf_parser.py", pdf_dir, pdf_dir
-                            ], check=True, capture_output=True, text=True, env=env)
-                            print("\u6210\u529f: \u5907\u7528\u89e3\u6790\u5668\u6210\u529f")
+
+                            result = subprocess.run(
+                                [
+                                    sys.executable,
+                                    "simple_pdf_parser.py",
+                                    pdf_dir,
+                                    pdf_dir,
+                                ],
+                                check=True,
+                                capture_output=True,
+                                text=True,
+                                env=env,
+                            )
+                            print(
+                                "\u6210\u529f: \u5907\u7528\u89e3\u6790\u5668\u6210\u529f"
+                            )
                     except Exception as e:
-                        print("\u9519\u8bef: \u91cd\u65b0\u89e3\u6790\u5931\u8d25: {}".format(e))
-                        
+                        print(
+                            "\u9519\u8bef: \u91cd\u65b0\u89e3\u6790\u5931\u8d25: {}".format(
+                                e
+                            )
+                        )
+
                         # \u521b\u5efa\u4e00\u4e2a\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6
-                        print("\u521b\u5efa\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6...")
+                        print(
+                            "\u521b\u5efa\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6..."
+                        )
                         with open(chunk_jsonl_path, "w", encoding="utf-8") as f:
                             for pdf_file in pdf_files:
                                 chunk = {
-                                    "text": "\u8fd9\u662f\u6587\u6863 {} \u7684\u5185\u5bb9\u3002\u7531\u4e8e\u89e3\u6790\u5668\u5931\u8d25\uff0c\u8fd9\u662f\u4e00\u4e2a\u5360\u4f4d\u7b26\u3002".format(pdf_file),
-                                    "source": pdf_file
+                                    "text": "\u8fd9\u662f\u6587\u6863 {} \u7684\u5185\u5bb9\u3002\u7531\u4e8e\u89e3\u6790\u5668\u5931\u8d25\uff0c\u8fd9\u662f\u4e00\u4e2a\u5360\u4f4d\u7b26\u3002".format(
+                                        pdf_file
+                                    ),
+                                    "source": pdf_file,
                                 }
-                                f.write(json.dumps(chunk, ensure_ascii=False) + "\
-")
-                        print("\u521b\u5efa\u4e86\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6")
+                                f.write(
+                                    json.dumps(chunk, ensure_ascii=False)
+                                    + "\
+"
+                                )
+                        print(
+                            "\u521b\u5efa\u4e86\u57fa\u672c\u7684chunks.jsonl\u6587\u4ef6"
+                        )
                 else:
-                    print("\u9519\u8bef: \u6ca1\u6709PDF\u6587\u4ef6\u53ef\u4f9b\u89e3\u6790")
+                    print(
+                        "\u9519\u8bef: \u6ca1\u6709PDF\u6587\u4ef6\u53ef\u4f9b\u89e3\u6790"
+                    )
                     sys.exit(1)
         except Exception as e:
             print("\u8b66\u544a: \u8bfb\u53d6chunks.jsonl\u51fa\u9519: {}".format(e))
@@ -185,25 +290,47 @@ def run_pipeline(pdf_dir, question=None, force_reparse=False):
                 force_reparse = True
                 print("\u5c06\u91cd\u65b0\u89e3\u6790PDF\u6587\u4ef6")
             else:
-                print("\u9519\u8bef: chunks.jsonl\u65e0\u6548\u4e14\u6ca1\u6709PDF\u6587\u4ef6\u53ef\u4f9b\u89e3\u6790")
+                print(
+                    "\u9519\u8bef: chunks.jsonl\u65e0\u6548\u4e14\u6ca1\u6709PDF\u6587\u4ef6\u53ef\u4f9b\u89e3\u6790"
+                )
                 sys.exit(1)
 
     # 3. \u751f\u6210\u5411\u91cf\u7d22\u5f15 (\u5982\u679c\u9700\u8981)
-    if force_reparse or not os.path.exists(faiss_index_path) or not os.path.exists(mapping_path) or os.path.getsize(faiss_index_path) == 0 or os.path.getsize(mapping_path) == 0:
+    if (
+        force_reparse
+        or not os.path.exists(faiss_index_path)
+        or not os.path.exists(mapping_path)
+        or os.path.getsize(faiss_index_path) == 0
+        or os.path.getsize(mapping_path) == 0
+    ):
         print("\u751f\u6210\u5411\u91cf\u7d22\u5f15...")
         try:
             embed_chunks(
                 jsonl_path=chunk_jsonl_path,
                 faiss_index_path=faiss_index_path,
-                mapping_path=mapping_path
+                mapping_path=mapping_path,
             )
         except Exception as e:
-            print("\u9519\u8bef: \u751f\u6210\u5411\u91cf\u7d22\u5f15\u5931\u8d25: {}".format(e))
+            print(
+                "\u9519\u8bef: \u751f\u6210\u5411\u91cf\u7d22\u5f15\u5931\u8d25: {}".format(
+                    e
+                )
+            )
             sys.exit(1)
     else:
-        print("\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684\u5411\u91cf\u7d22\u5f15\uff0c\u8df3\u8fc7\u751f\u6210\u6b65\u9aa4")
-        print("  faiss_index.index \u5927\u5c0f: {} \u5b57\u8282".format(os.path.getsize(faiss_index_path)))
-        print("  mapping.json \u5927\u5c0f: {} \u5b57\u8282".format(os.path.getsize(mapping_path)))
+        print(
+            "\u6210\u529f: \u627e\u5230\u73b0\u6709\u7684\u5411\u91cf\u7d22\u5f15\uff0c\u8df3\u8fc7\u751f\u6210\u6b65\u9aa4"
+        )
+        print(
+            "  faiss_index.index \u5927\u5c0f: {} \u5b57\u8282".format(
+                os.path.getsize(faiss_index_path)
+            )
+        )
+        print(
+            "  mapping.json \u5927\u5c0f: {} \u5b57\u8282".format(
+                os.path.getsize(mapping_path)
+            )
+        )
 
     # 4. \u95ee\u7b54\u67e5\u8be2
     if question:
@@ -211,15 +338,20 @@ def run_pipeline(pdf_dir, question=None, force_reparse=False):
         print("\u95ee\u9898: {}".format(question))
         try:
             answer = query(question, index_dir=pdf_dir)
-            print("\
+            print(
+                "\
 \u56de\u7b54:\
-{}".format(answer))
+{}".format(
+                    answer
+                )
+            )
         except Exception as e:
             print("\u9519\u8bef: \u67e5\u8be2\u5931\u8d25: {}".format(e))
             sys.exit(1)
     else:
         # \u4ea4\u4e92\u6a21\u5f0f
         interactive_query(pdf_dir)
+
 
 def create_simple_parser():
     """\u521b\u5efa\u7b80\u5355\u7684PDF\u89e3\u6790\u5668\u4f5c\u4e3a\u5907\u7528"""
@@ -414,22 +546,24 @@ if __name__ == "__main__":
         print("Fatal error: {}".format(e))
         sys.exit(1)
 """
-    
+
     with open("simple_pdf_parser.py", "w", encoding="utf-8") as f:
         f.write(parser_code)
-    
+
     # Make it executable
     os.chmod("simple_pdf_parser.py", 0o755)
-    
+
     print("\u521b\u5efa\u4e86simple_pdf_parser.py\u4f5c\u4e3a\u5907\u7528")
+
 
 def main():
     # \u8bbe\u7f6e\u73af\u5883\u53d8\u91cf\uff0c\u5f3a\u5236\u79bb\u7ebf\u6a21\u5f0f
     os.environ["HF_DATASETS_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    
+
     if len(sys.argv) < 2:
-        print("""
+        print(
+            """
 \u79bb\u7ebfRAG\u7cfb\u7edf\u4f7f\u7528\u8bf4\u660e:
 
 \u57fa\u672c\u7528\u6cd5:
@@ -451,36 +585,43 @@ def main():
 
 \u53ef\u7528\u7684\u6570\u636e\u76ee\u5f55:
   ./data - \u5305\u542b\u5df2\u5904\u7406\u7684PDF\u6570\u636e
-        """)
+        """
+        )
         sys.exit(1)
 
     # \u89e3\u6790\u53c2\u6570
     args = sys.argv[1:]
-    force_reparse = '--reparse' in args
-    fix_mode = '--fix' in args
-    
+    force_reparse = "--reparse" in args
+    fix_mode = "--fix" in args
+
     if force_reparse:
-        args.remove('--reparse')
-    
+        args.remove("--reparse")
+
     if fix_mode:
-        args.remove('--fix')
-    
+        args.remove("--fix")
+
     pdf_dir = args[0]
     question = " ".join(args[1:]) if len(args) > 1 else None
 
     # \u5982\u679c\u662f\u4fee\u590d\u6a21\u5f0f
     if fix_mode:
-        print("\u4fee\u590d\u6a21\u5f0f: \u5c1d\u8bd5\u4fee\u590d {} \u4e2d\u7684\u6570\u636e".format(pdf_dir))
+        print(
+            "\u4fee\u590d\u6a21\u5f0f: \u5c1d\u8bd5\u4fee\u590d {} \u4e2d\u7684\u6570\u636e".format(
+                pdf_dir
+            )
+        )
         try:
             # \u8fd0\u884c\u4fee\u590d\u811a\u672c
             env = os.environ.copy()
             env["HF_DATASETS_OFFLINE"] = "1"
             env["TRANSFORMERS_OFFLINE"] = "1"
-            
-            subprocess.run([
-                sys.executable, "fix_chunks_issue.py", pdf_dir
-            ], check=True, env=env)
-            print("\u6210\u529f: \u4fee\u590d\u5b8c\u6210\uff0c\u73b0\u5728\u8fd0\u884cRAG\u7cfb\u7edf")
+
+            subprocess.run(
+                [sys.executable, "fix_chunks_issue.py", pdf_dir], check=True, env=env
+            )
+            print(
+                "\u6210\u529f: \u4fee\u590d\u5b8c\u6210\uff0c\u73b0\u5728\u8fd0\u884cRAG\u7cfb\u7edf"
+            )
         except Exception as e:
             print("\u9519\u8bef: \u4fee\u590d\u5931\u8d25: {}".format(e))
             sys.exit(1)
@@ -491,9 +632,10 @@ def main():
         print("\u7cfb\u7edf\u9519\u8bef: {}".format(e))
         sys.exit(1)
 
+
 if __name__ == "__main__":
     # \u8bbe\u7f6e\u73af\u5883\u53d8\u91cf\uff0c\u5f3a\u5236\u79bb\u7ebf\u6a21\u5f0f
     os.environ["HF_DATASETS_OFFLINE"] = "1"
     os.environ["TRANSFORMERS_OFFLINE"] = "1"
-    
+
     main()
